@@ -4,7 +4,7 @@ if myHero.charName ~= "Ziggs" then return end
 require "Eternal Prediction"
 
 --// spelldata
-local Q = { Range = myHero:GetSpellData(_Q).range, Delay = myHero:GetSpellData(_Q).delay, Speed = myHero:GetSpellData(_Q).speed, Width = myHero:GetSpellData(_Q).width}
+local Q = { Range = 1400, Delay = myHero:GetSpellData(_Q).delay, Speed = myHero:GetSpellData(_Q).speed, Width = myHero:GetSpellData(_Q).width}
 local W = { Range = myHero:GetSpellData(_W).range, Delay = myHero:GetSpellData(_W).delay, Speed = myHero:GetSpellData(_W).speed, Width = myHero:GetSpellData(_W).width}
 local E = { Range = myHero:GetSpellData(_E).range, Delay = myHero:GetSpellData(_E).delay, Speed = myHero:GetSpellData(_E).speed, Width = myHero:GetSpellData(_E).width}
 local R = { Range = myHero:GetSpellData(_R).range, Delay = myHero:GetSpellData(_R).delay, Speed = myHero:GetSpellData(_R).speed, Width = myHero:GetSpellData(_R).width}
@@ -515,7 +515,7 @@ function Killsteal()
         end
     end
     if Ready(_R) and ValidTarget(target, R.Range) then
-        if Ziggs.KS.R:Value() and Rdmg(target) > target.health then
+        if Ziggs.KS.R:Value() and Rdmg(target) > target.health and Qdmg(target) < target.health * 0.5 and Wdmg(target) < target.health * 0.5 and Edmg(target) < target.health * 0.5 then
             local Rpred = RtoPred:GetPrediction(target, myHero.pos)
             if Rpred and Rpred.hitChance >= 0.25 then
                 if OnScreen(target) then
@@ -602,9 +602,9 @@ function Summoners()
 	if myHero:GetSpellData(SUMMONER_1).name == "SummonerHeal"
 	or myHero:GetSpellData(SUMMONER_2).name == "SummonerHeal" then
 		if Ziggs.A.S.Heal:Value() then
-			if myHero:GetSpellData(SUMMONER_1).name == "SummonerHeal" and Ready(SUMMONER_1) and HP100(myHero) < Ziggs.A.S.HealHP:Value() then
+			if myHero:GetSpellData(SUMMONER_1).name == "SummonerHeal" and Ready(SUMMONER_1) and PercentHP(myHero) < Ziggs.A.S.HealHP:Value() then
 				Control.CastSpell(HK_SUMMONER_1)
-			elseif myHero:GetSpellData(SUMMONER_2).name == "SummonerHeal" and Ready(SUMMONER_1) and HP100(myHero) < Ziggs.A.S.HealHP:Value() then
+			elseif myHero:GetSpellData(SUMMONER_2).name == "SummonerHeal" and Ready(SUMMONER_1) and PercentHP(myHero) < Ziggs.A.S.HealHP:Value() then
 				Control.CastSpell(HK_SUMMONER_2)
 			end
 		end
@@ -612,9 +612,9 @@ function Summoners()
 	if myHero:GetSpellData(SUMMONER_1).name == "SummonerBarrier"
 	or myHero:GetSpellData(SUMMONER_2).name == "SummonerBarrier" then
 		if Ziggs.A.S.Barrier:Value() then
-			if myHero:GetSpellData(SUMMONER_1).name == "SummonerBarrier" and Ready(SUMMONER_1) and HP100(myHero) < Ziggs.A.S.BarrierHP:Value() then
+			if myHero:GetSpellData(SUMMONER_1).name == "SummonerBarrier" and Ready(SUMMONER_1) and PercentHP(myHero) < Ziggs.A.S.BarrierHP:Value() then
 				Control.CastSpell(HK_SUMMONER_1)
-			elseif myHero:GetSpellData(SUMMONER_2).name == "SummonerBarrier" and Ready(SUMMONER_1) and HP100(myHero) < Ziggs.A.S.BarrierHP:Value() then
+			elseif myHero:GetSpellData(SUMMONER_2).name == "SummonerBarrier" and Ready(SUMMONER_1) and PercentHP(myHero) < Ziggs.A.S.BarrierHP:Value() then
 				Control.CastSpell(HK_SUMMONER_2)
 			end
 		end

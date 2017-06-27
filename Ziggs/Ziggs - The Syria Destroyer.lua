@@ -204,7 +204,7 @@ Ziggs:MenuElement({type = MENU, id = "MM", name = "Mana Settings"})
 Ziggs:MenuElement({type = MENU, id = "A", name = "Activator Settings"})
 Ziggs:MenuElement({type = MENU, id = "D", name = "Drawings"})
 Ziggs:MenuElement({id = "Author", name = "Author", drop = {"parad0x"}})
-Ziggs:MenuElement({id = "Version", name = "Version", drop = {"Alpha v1"}})
+Ziggs:MenuElement({id = "Version", name = "Version", drop = {"v1.2"}})
 Ziggs:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.12"}})
 
 Ziggs.C:MenuElement({id = "Q", name = "Q: Bouncing Bomb", value = true})

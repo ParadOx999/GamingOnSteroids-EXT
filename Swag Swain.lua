@@ -206,7 +206,7 @@ Swain:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.13"}})
 Swain.C:MenuElement({id = "Q", name = "Q: Decrepify", value = true})
 Swain.C:MenuElement({id = "W", name = "W: Nevermove", value = true})
 Swain.C:MenuElement({id = "E", name = "E: Torment", value = true})
-Swain.C:MenuElement({id = "R", name ="R: Ravenous Flock", value = true})
+Swain.C:MenuElement({id = "R", name = "R: Ravenous Flock", value = true})
 Swain.C:MenuElement({id = "RMin", name = "Min Near Enemies to R", value = 1, min = 0, max = 4, tooltip = "If You Want 1 Enemy Put 0, 2 Enemies Put 1, 3 Enemies put 2 and etc..."})
 
 Swain.H:MenuElement({id = "Q", name = "Q: Decrepify", value = true})

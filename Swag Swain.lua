@@ -206,7 +206,7 @@ Swain:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.13"}})
 Swain.C:MenuElement({id = "Q", name = "Q: Decrepify", value = true})
 Swain.C:MenuElement({id = "W", name = "W: Nevermove", value = true})
 Swain.C:MenuElement({id = "E", name = "E: Torment", value = true})
-Swain.C:MenuElement({id = "R", name ="R: Decrepify", value = true})
+Swain.C:MenuElement({id = "R", name ="R: Ravenous Flock", value = true})
 Swain.C:MenuElement({id = "RMin", name = "Min Near Enemies to R", value = 1, min = 0, max = 4, tooltip = "If You Want 1 Enemy Put 0, 2 Enemies Put 1, 3 Enemies put 2 and etc..."})
 
 Swain.H:MenuElement({id = "Q", name = "Q: Decrepify", value = true})
@@ -290,10 +290,10 @@ DelayAction(function()
 end, 2)
 Swain.A.S:MenuElement({type = SPACE, id = "Note", name = "Note: Ghost/TP/Flash is not supported"})
 
-Swain.D:MenuElement({id = "Q", name = "Q: Boucing Bomb", value = true})
-Swain.D:MenuElement({id = "W", name = "W: Satchel Charge", value = true})
-Swain.D:MenuElement({id = "E", name = "E: Hexplosive Minefield", value = true})
-Swain.D:MenuElement({id = "R", name = "R: Mega Inferno Bomb(Minimap) ", value = true})
+Swain.D:MenuElement({id = "Q", name = "Q: Decrepify", value = true})
+Swain.D:MenuElement({id = "W", name = "W: Nevermove", value = true})
+Swain.D:MenuElement({id = "E", name = "E: Torment", value = true})
+Swain.D:MenuElement({id = "R", name = "R: Ravenous Flock", value = true})
 Swain.D:MenuElement({id = "Dmg", name = "Damage HP bar", value = true})
 
 --// script

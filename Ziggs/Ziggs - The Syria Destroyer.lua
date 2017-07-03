@@ -1,7 +1,7 @@
 if myHero.charName ~= "Ziggs" then return end
 
 --// requirements
-require "Eternal Prediction"
+require "DamageLib"
 
 --// spelldata
 local Q = { Range = 1400, Delay = myHero:GetSpellData(_Q).delay, Speed = myHero:GetSpellData(_Q).speed, Width = myHero:GetSpellData(_Q).width}
@@ -9,10 +9,20 @@ local W = { Range = myHero:GetSpellData(_W).range, Delay = myHero:GetSpellData(_
 local E = { Range = myHero:GetSpellData(_E).range, Delay = myHero:GetSpellData(_E).delay, Speed = myHero:GetSpellData(_E).speed, Width = myHero:GetSpellData(_E).width}
 local R = { Range = myHero:GetSpellData(_R).range, Delay = myHero:GetSpellData(_R).delay, Speed = myHero:GetSpellData(_R).speed, Width = myHero:GetSpellData(_R).width}
 
-local QtoPred = Prediction:SetSpell(Q, TYPE_LINE, true)
-local EtoPred = Prediction:SetSpell(E, TYPE_CIRCULAR, true)
-local RtoPred = Prediction:SetSpell(R, TYPE_CIRCULAR, true)
 --// needs
+local _EnemyHeroes
+local function GetEnemyHeroes()
+	if _EnemyHeroes then return _EnemyHeroes end
+	_EnemyHeroes = {}
+	for i = 1, Game.HeroCount() do
+		local unit = Game.Hero(i)
+		if unit.isEnemy then
+			table.insert(_EnemyHeroes, unit)
+		end
+	end
+	return _EnemyHeroes
+end
+
 local function Ready(spell)
 	return myHero:GetSpellData(spell).currentCd == 0 and myHero:GetSpellData(spell).level > 0 and myHero:GetSpellData(spell).mana <= myHero.mana and Game.CanUseSpell(spell) == 0 
 end
@@ -20,6 +30,16 @@ end
 function ValidTarget(target, range)
 	range = range and range or math.huge
 	return target ~= nil and target.valid and target.visible and not target.dead and target.distance <= range
+end
+
+local function IsImmobileTarget(unit)
+	for i = 0, unit.buffCount do
+		local buff = unit:GetBuff(i)
+		if buff and (buff.type == 5 or buff.type == 11 or buff.type == 29 or buff.type == 24 or buff.name == "recall") and buff.count > 0 then
+			return true
+		end
+	end
+	return false	
 end
 
 function PercentHP(target)
@@ -36,9 +56,7 @@ end
 
 local function GetTarget(range)
 	local target = nil
-	if _G.EOWLoaded then
-		target = EOW:GetTarget(range)
-	elseif _G.SDK and _G.SDK.Orbwalker then
+	if _G.SDK and _G.SDK.Orbwalker then
 		target = _G.SDK.TargetSelector:GetTarget(range)
 	else
 		target = GOS:GetTarget(range)
@@ -47,17 +65,7 @@ local function GetTarget(range)
 end
 
 local function GetMode()
-	if _G.EOWLoaded then
-		if EOW.CurrentMode == 1 then
-			return "Combo"
-		elseif EOW.CurrentMode == 2 then
-			return "Harass"
-		elseif EOW.CurrentMode == 3 then
-			return "Lasthit"
-		elseif EOW.CurrentMode == 4 then
-			return "Clear"
-		end
-	elseif _G.SDK and _G.SDK.Orbwalker then
+	if _G.SDK and _G.SDK.Orbwalker then
 		if _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_COMBO] then
 			return "Combo"
 		elseif _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_HARASS] then
@@ -190,6 +198,22 @@ local function NoPotion()
 	return true
 end
 
+local sqrt = math.sqrt
+
+local function GetDistanceSqr(p1, p2)
+    local dx = p1.x - p2.x
+    local dz = p1.z - p2.z
+    return (dx * dx + dz * dz)
+end
+
+local function GetDistance(p1, p2)
+    return sqrt(GetDistanceSqr(p1, p2))
+end
+
+local function GetDistance2D(p1,p2)
+    return sqrt((p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y))
+end
+
 --// Menu
 local Ziggs = MenuElement({type = MENU, id = "Ziggs", name = "Ziggs - The Syria Destroyer", leftIcon = "https://raw.githubusercontent.com/ParadOx999/GamingOnSteroids-EXT/master/Ziggs/Ziggs.png"})
 
@@ -204,8 +228,8 @@ Ziggs:MenuElement({type = MENU, id = "MM", name = "Mana Settings"})
 Ziggs:MenuElement({type = MENU, id = "A", name = "Activator Settings"})
 Ziggs:MenuElement({type = MENU, id = "D", name = "Drawings"})
 Ziggs:MenuElement({id = "Author", name = "Author", drop = {"parad0x"}})
-Ziggs:MenuElement({id = "Version", name = "Version", drop = {"v1.2"}})
-Ziggs:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.12"}})
+Ziggs:MenuElement({id = "Version", name = "Version", drop = {"v1.3"}})
+Ziggs:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.13"}})
 
 Ziggs.C:MenuElement({id = "Q", name = "Q: Bouncing Bomb", value = true})
 Ziggs.C:MenuElement({id = "W", name = "W: Satchel Charge", drop = {'Pull','Push','Disabled'}})
@@ -308,9 +332,99 @@ Ziggs.D:MenuElement({id = "E", name = "E: Hexplosive Minefield", value = true})
 Ziggs.D:MenuElement({id = "R", name = "R: Mega Inferno Bomb(Minimap) ", value = true})
 Ziggs.D:MenuElement({id = "Dmg", name = "Damage HP bar", value = true})
 
+local _OnVision = {}
+function OnVision(unit)
+	if _OnVision[unit.networkID] == nil then _OnVision[unit.networkID] = {state = unit.visible , tick = GetTickCount(), pos = unit.pos} end
+	if _OnVision[unit.networkID].state == true and not unit.visible then _OnVision[unit.networkID].state = false _OnVision[unit.networkID].tick = GetTickCount() end
+	if _OnVision[unit.networkID].state == false and unit.visible then _OnVision[unit.networkID].state = true _OnVision[unit.networkID].tick = GetTickCount() end
+	return _OnVision[unit.networkID]
+end
+
 --// script
-Callback.Add("Tick", function() Tick() end)
+Callback.Add("Tick", function() OnVisionF() Tick() end)
 Callback.Add("Draw", function() Drawings() end)
+
+local visionTick = GetTickCount()
+function OnVisionF()
+	if GetTickCount() - visionTick > 100 then
+		for i,v in pairs(GetEnemyHeroes()) do
+			OnVision(v)
+		end
+	end
+end
+
+local _OnWaypoint = {}
+function OnWaypoint(unit)
+	if _OnWaypoint[unit.networkID] == nil then _OnWaypoint[unit.networkID] = {pos = unit.posTo , speed = unit.ms, time = Game.Timer()} end
+	if _OnWaypoint[unit.networkID].pos ~= unit.posTo then 
+		_OnWaypoint[unit.networkID] = {startPos = unit.pos, pos = unit.posTo , speed = unit.ms, time = Game.Timer()}
+			DelayAction(function()
+				local time = (Game.Timer() - _OnWaypoint[unit.networkID].time)
+				local speed = GetDistance2D(_OnWaypoint[unit.networkID].startPos,unit.pos)/(Game.Timer() - _OnWaypoint[unit.networkID].time)
+				if speed > 1250 and time > 0 and unit.posTo == _OnWaypoint[unit.networkID].pos and GetDistance(unit.pos,_OnWaypoint[unit.networkID].pos) > 200 then
+					_OnWaypoint[unit.networkID].speed = GetDistance2D(_OnWaypoint[unit.networkID].startPos,unit.pos)/(Game.Timer() - _OnWaypoint[unit.networkID].time)
+				end
+			end,0.05)
+	end
+	return _OnWaypoint[unit.networkID]
+end
+
+local function GetPred(unit, speed, delay)
+	local speed = speed or math.huge
+	local delay = delay or 0.25
+	local unitSpeed = unit.ms
+	if OnWaypoint(unit).speed > unitSpeed then unitSpeed = OnWaypoint(unit).speed end
+	if OnVision(unit).state == false then
+		local unitPos = unit.pos + Vector(unit.pos,unit.posTo):Normalized() * ((GetTickCount() - OnVision(unit).tick)/1000 * unitSpeed)
+		local predPos = unitPos + Vector(unit.pos,unit.posTo):Normalized() * (unitSpeed * (delay + (GetDistance(myHero.pos,unitPos)/speed)))
+		if GetDistance(unit.pos,predPos) > GetDistance(unit.pos,unit.posTo) then predPos = unit.posTo end
+		return predPos
+	else
+		if unitSpeed > unit.ms then
+			local predPos = unit.pos + Vector(OnWaypoint(unit).startPos,unit.posTo):Normalized() * (unitSpeed * (delay + (GetDistance(myHero.pos,unit.pos)/speed)))
+			if GetDistance(unit.pos,predPos) > GetDistance(unit.pos,unit.posTo) then predPos = unit.posTo end
+			return predPos
+		elseif IsImmobileTarget(unit) then
+			return unit.pos
+		else
+			return unit:GetPrediction(speed,delay)
+		end
+	end
+end
+
+local castSpell = {state = 0, tick = GetTickCount(), casting = GetTickCount() - 1000, mouse = mousePos}
+
+local function CustomCast(spell, pos, delay)
+	if pos == nil then return end
+	if _G.EOWLoaded or _G.SDK then
+		Control.CastSpell(spell, pos)
+	elseif _G.GOS then
+		local ticker = GetTickCount()
+		if castSpell.state == 0 and ticker - castSpell.casting > delay + Game.Latency() and pos:ToScreen().onScreen then
+			castSpell.state = 1
+			castSpell.mouse = mousePos
+			castSpell.tick = ticker
+		end
+		if castSpell.state == 1 then
+			if ticker - castSpell.tick < Game.Latency() then
+				Control.SetCursorPos(pos)
+				Control.KeyDown(spell)
+				Control.KeyUp(spell)
+				castSpell.casting = ticker + delay
+				DelayAction(function()
+					if castSpell.state == 1 then
+						Control.SetCursorPos(castSpell.mouse)
+						castSpell.state = 0
+					end
+				end, Game.Latency()/1000)
+			end
+			if ticker - castSpell.casting > Game.Latency() then
+				Control.SetCursorPos(castSpell.mouse)
+				castSpell.state = 0
+			end
+		end
+	end
+end
 
 function Tick()
     local Mode = GetMode()
@@ -335,11 +449,9 @@ function Combo()
     local target = GetTarget(R.Range)
     if target == nil then return end
     if Ready(_Q) and ValidTarget(target, Q.Range) then
-        if Ziggs.C.Q:Value() then
-            local Qpred = QtoPred:GetPrediction(target, myHero.pos)
-            if Qpred and Qpred.hitChance >= 0.25 and Qpred:mCollision() == 0 then
-                Control.CastSpell(HK_Q, Qpred.castPos)
-            end
+        if Ziggs.C.Q:Value() and target:GetCollision(Q.Width, Q.Speed, Q.Delay) then
+            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_Q, pos, 250)
         end
     end
     if Ready(_W) and ValidTarget(target, W.Range + 100) then
@@ -355,22 +467,18 @@ function Combo()
     end
     if Ready(_E) and ValidTarget(target, E.Range) then
         if Ziggs.C.E:Value() then
-            local Epred = EtoPred:GetPrediction(target, myHero.pos)
-            if Epred and Epred.hitChance >= 0.25 then
-                Control.CastSpell(HK_E, Epred.castPos)
-            end
+            local pos = GetPred(target, E.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_E, pos, 250)
         end
     end
     if Ready(_R) and ValidTarget(target, R.Range) then
         if Ziggs.C.R:Value() then
             if HeroesAround(target.pos, 475, 200) > Ziggs.C.RMin:Value() then
-                local Rpred = RtoPred:GetPrediction(target, myHero.pos)
-                if Rpred and Rpred.hitChance >= 0.25 then
-                   if OnScreen(target) then
-                        Control.CastSpell(HK_R, Rpred.castPos)
-                    else
-                        Control.CastSpell(HK_R, Rpred.castPos:ToMM())
-                    end
+                local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+                if OnScreen(target) then
+                    CustomCast(HK_R, pos, 250)
+                else
+                    CustomCast(HK_E, pos:ToMM(), 250)
                 end
             end
         end
@@ -385,10 +493,8 @@ function Lane()
             if Ready(_Q) and ValidTarget(minion, Q.Range) then
                 if Ziggs.LC.Q:Value() then
                     if MinionsAround(minion.pos, 180, 200) > Ziggs.LC.QMin:Value() then
-                        local Qpred = QtoPred:GetPrediction(minion, myHero.pos)
-                        if Qpred and Qpred.hitChance >= 0.25 then
-                            Control.CastSpell(HK_Q, Qpred.castPos)
-                        end
+                        local pos = GetPred(minion, Q.Speed, 0.25 + (Game.Latency()/1000))
+						CustomCast(HK_Q, pos, 250)
                     end
                 end
             end
@@ -433,10 +539,8 @@ function Jungle()
         if minion and minion.team == 300 then
             if Ready(_Q) and ValidTarget(minion, Q.Range) then
                 if Ziggs.JC.Q:Value() then
-                    local Qpred = QtoPred:GetPrediction(minion, myHero.pos)
-                    if Qpred and Qpred.hitChance >= 0.25 then
-                        Control.CastSpell(HK_Q, Qpred.castPos)
-                    end
+                    local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+					CustomCast(HK_Q, pos, 250)
                 end
             end
             if Ready(_W) and ValidTarget(minion, W.Range) then
@@ -459,10 +563,8 @@ function Harass()
     if target == nil then return end
     if Ready(_Q) and ValidTarget(target, Q.Range) then
         if Ziggs.H.Q:Value() then
-            local Qpred = QtoPred:GetPrediction(target, myHero.pos)
-            if Qpred and Qpred.hitChance >= 0.25 and Qpred:mCollision() == 0 then
-                Control.CastSpell(HK_Q, Qpred.castPos)
-            end
+            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_Q, pos, 250)
         end
     end
 end
@@ -479,10 +581,8 @@ function Flee()
     end
     if Ready(_E) and ValidTarget(target, E.Range) then
         if Ziggs.F.E:Value() then
-            local Epred = EtoPred:GetPrediction(target, myHero.pos)
-            if Epred and Epred.hitChance >= 0.25 then
-                Control.CastSpell(HK_E, Epred.castPos)
-            end
+            local pos = GetPred(target, E.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_E, pos, 250)
         end
     end
 end
@@ -493,10 +593,8 @@ function Killsteal()
     if target == nil then return end
     if Ready(_Q) and ValidTarget(target, Q.Range) then
         if Ziggs.KS.Q:Value() and Qdmg(target) > target.health then
-            local Qpred = QtoPred:GetPrediction(target, myHero.pos)
-            if Qpred and Qpred.hitChance >= 0.25 and Qpred:mCollision() == 0 then
-                Control.CastSpell(HK_Q, Qpred.castPos)
-            end
+            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_Q, pos, 250)
         end
     end
     if Ready(_W) and ValidTarget(target, W.Range) then
@@ -508,21 +606,17 @@ function Killsteal()
     end
     if Ready(_E) and ValidTarget(target, E.Range) then
         if Ziggs.KS.E:Value() and Edmg(target) > target.health then
-            local Epred = EtoPred:GetPrediction(target, myHero.pos)
-            if Epred and Epred.hitChance >= 0.25 then
-                Control.CastSpell(HK_E, Epred.castPos)
-            end
+            local pos = GetPred(target, E.Speed, 0.25 + (Game.Latency()/1000))
+			CustomCast(HK_E, pos, 250)
         end
     end
     if Ready(_R) and ValidTarget(target, R.Range) then
         if Ziggs.KS.R:Value() and Rdmg(target) > target.health and Qdmg(target) < target.health * 0.5 and Wdmg(target) < target.health * 0.5 and Edmg(target) < target.health * 0.5 then
-            local Rpred = RtoPred:GetPrediction(target, myHero.pos)
-            if Rpred and Rpred.hitChance >= 0.25 then
-                if OnScreen(target) then
-                    Control.CastSpell(HK_R, Rpred.castPos)
-                else
-                    Control.CastSpell(HK_R, Rpred.castPos:ToMM())
-                end
+            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+            if OnScreen(target) then
+            	CustomCast(HK_R, pos, 250)
+            else
+                CustomCast(HK_E, pos:ToMM(), 250)
             end
         end
     end
@@ -536,16 +630,13 @@ function Lasthit()
         if minion and minion.team == 200 then
             if Ready(_Q) and ValidTarget(minion, Q.Range) then
                 if Ziggs.M.Q:Value() and Qdmg(minion) > minion.health and myHero.pos:DistanceTo(minion.pos) > 550 then
-                    local Qpred = QtoPred:GetPrediction(minion, myHero.pos)
-                    if Qpred and Qpred.hitChance >= 0.25 then
-                        Control.CastSpell(HK_Q, Qpred.castPos)
-                    end
+                    local pos = GetPred(minion, Q.Speed, 0.25 + (Game.Latency()/1000))
+					CustomCast(HK_Q, pos, 250)
                 end
             end
         end
     end
 end
-
 
 function Summoners()
 	local target = GetTarget(1500)

@@ -7,7 +7,7 @@ require "DamageLib"
 local Q = { Range = 1075, Delay = 0.25, Width = 125, Radius = 225, Speed = 850}
 local W = { Range = 1000, Delay = myHero:GetSpellData(_W).delay, Width = myHero:GetSpellData(_W).width, Speed = myHero:GetSpellData(_W).speed}
 local E = { Range = 650, Delay = myHero:GetSpellData(_E).delay, Width = myHero:GetSpellData(_E).width, Speed = 1600}
-local R = { Range = 750, Delay = myHero:GetSpellData(_R).delay, Width = myHero:GetSpellData(_W).width, Radius = myHero:GetSpellData(_R).radius}
+local R = { Range = 750, Delay = myHero:GetSpellData(_R).delay, Width = myHero:GetSpellData(_W).width, Radius = 400}
 
 --// needs
 local _EnemyHeroes
@@ -217,18 +217,19 @@ Anivia:MenuElement({type = MENU, id = "KS", name = "Killsteal Menu"})
 Anivia:MenuElement({type = MENU, id = "A", name = "Activator Menu"})
 Anivia:MenuElement({type = MENU, id = "D", name = "Drawings Menu"})
 Anivia:MenuElement({id = "Author", name = "Author", drop = {"parad0x"}})
-Anivia:MenuElement({id = "Version", name = "Version", drop = {"v1"}})
+Anivia:MenuElement({id = "Version", name = "Version", drop = {"v1.2"}})
 Anivia:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.13"}})
 
 Anivia.C:MenuElement({name = "Flash Frost", drop = {"Q"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/FlashFrost.png"})
 Anivia.C:MenuElement({id = "Q", name = "Enable", value = true})
 Anivia.C:MenuElement({id = "Qm", name = "Mana %", value = 0, min = 0, max = 100})
 Anivia.C:MenuElement({name = "Crystallize", drop = {"W"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/Crystallize.png"})
-Anivia.C:MenuElement({id = "W", name = "Enable", drop = {'Pull','Push','Disabled'}})
+Anivia.C:MenuElement({id = "Wa", name = "Toggle: W ON/OFF", key = string.byte("M"), toggle = true})
+Anivia.C:MenuElement({id = "W", name = "Enable", drop = {'Pull','Push'}})
 Anivia.C:MenuElement({id = "NoPull", name = "Dont Pull if HP below %", value = 40, min = 0, max = 100})
 Anivia.C:MenuElement({id = "Wm", name = "Mana %", value = 0, min = 0, max = 100})
 Anivia.C:MenuElement({name = "Frostbite", drop = {"E"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/Frostbite.png"})
-Anivia.C:MenuElement({id = "E", name = "Enable", drop = {'Enhanced','Normal','Disabled'}})
+Anivia.C:MenuElement({id = "E", name = "Toggle: E Mode Key", key = string.byte("T"), toggle = true})
 Anivia.C:MenuElement({id = "Em", name = "Mana %", value = 0, min = 0, max = 100})
 Anivia.C:MenuElement({name = "Glacial Storm", drop = {"R"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/GlacialStorm.png"})
 Anivia.C:MenuElement({id = "R", name = "Enable", value = true})
@@ -278,8 +279,10 @@ Anivia.D:MenuElement({name = "Flash Frost", drop = {"Q"}, leftIcon = "http://ddr
 Anivia.D:MenuElement({id = "Q", name = "Draw Range", value = true})
 Anivia.D:MenuElement({name = "Crystallize", drop = {"W"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/Crystallize.png"})
 Anivia.D:MenuElement({id = "W", name = "Draw Range", value = true})
+Anivia.D:MenuElement({id = "Wa", name = "Toggle Mode", value = true})
 Anivia.D:MenuElement({name = "Frostbite", drop = {"E"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/Frostbite.png"})
 Anivia.D:MenuElement({id = "E", name = "Draw Range", value = true})
+Anivia.D:MenuElement({id = "Emode", name = "Toggle Mode", value = true})
 Anivia.D:MenuElement({name = "Glacial Storm", drop = {"R"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/GlacialStorm.png"})
 Anivia.D:MenuElement({id = "R", name = "Draw Range", value = true})
 Anivia.D:MenuElement({name = "Draw Damage", drop = {"Q + E"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/champion/Anivia.png"})
@@ -379,6 +382,19 @@ function OnWaypoint(unit)
 	return _OnWaypoint[unit.networkID]
 end
 
+local function EnableOrb(bool)
+	if Orb == 1 then
+		EOW:SetMovements(bool)
+		EOW:SetAttacks(bool)
+	elseif Orb == 2 then
+		_G.SDK.Orbwalker:SetMovement(bool)
+		_G.SDK.Orbwalker:SetAttack(bool)
+	else
+		GOS.BlockMovement = not bool
+		GOS.BlockAttack = not bool
+	end
+end
+
 local function GetPred(unit, speed, delay)
 	local speed = speed or math.huge
 	local delay = delay or 0.25
@@ -457,17 +473,36 @@ end
 function Combo()
     local target = GetTarget(1200)
     if target == nil then return end
-    if Ready(_Q) and ValidTarget(target, Q.Range) then
-        if Anivia.C.Qm:Value() > PercentMP(myHero) then return end
-        if Anivia.C.Q:Value() and myHero:GetSpellData(_Q).toggleState == 1 then
-            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
-            CustomCast(HK_Q, pos, 250)
-        elseif myHero:GetSpellData(_Q).toggleState == 2 then
-            for i = 0, Game.ParticleCount() do
-            	local particle = Game.Particle(i)
-                if particle.name == "Anivia_Base_Q_AOE_Mis.troy" then
-                    if target and target.pos:DistanceTo(particle.pos) < Q.Radius then
-                            Control.CastSpell(HK_Q)
+    if Ready(_R) and myHero.pos:DistanceTo(target.pos) < 650 then
+        if Anivia.C.Rm:Value() > PercentMP(myHero) then return end
+        if Anivia.C.R:Value() then
+            if myHero:GetSpellData(_R).toggleState == 1 then
+                local pos = GetPred(target, R.Speed, 0.25 + (Game.Latency()/1000))
+                EnableOrb(false)
+                CustomCast(HK_R, pos, 250)
+                EnableOrb(true)
+            elseif myHero:GetSpellData(_R).toggleState == 2 then
+                for i = 0, Game.ParticleCount() do
+					local particle = Game.Particle(i)
+					if particle.name == "Anivia_Base_R_AOE_Green.troy" then
+						if target and target.pos:DistanceTo(particle.pos) > 400 then
+							Control.CastSpell(HK_R)
+						end
+					end
+				end
+            end
+        end
+    end
+    if Ready(_E) and myHero.pos:DistanceTo(target.pos) < 650 then
+        if Anivia.C.Em:Value() > PercentMP(myHero) then return end
+        if Anivia.C.E:Value() == false then
+            Control.CastSpell(HK_E, target)
+        elseif Anivia.C.E:Value() == true then
+            for i = 0, target.buffCount do
+            local buff = target:GetBuff(i);
+                if buff.count > 0 then
+                    if buff.name == "aniviaiced" then
+                        Control.CastSpell(HK_E, target)
                     end
                 end
             end
@@ -475,44 +510,39 @@ function Combo()
     end
     if Ready(_W) and ValidTarget(target, W.Range + 50) then
         if Anivia.C.Wm:Value() > PercentMP(myHero) then return end
-        if Anivia.C.W:Value() ~= 3 then
+        if Anivia.C.Wa:Value() then
             if Anivia.C.W:Value() == 1 and PercentHP(myHero) > Anivia.C.NoPull:Value() and myHero.pos:DistanceTo(target.pos) < W.Range - 50 then
                 local pull = Vector(myHero.pos) + Vector(Vector(target.pos) - Vector(myHero.pos)):Normalized() * (myHero.pos:DistanceTo(target.pos) + 88)
+                EnableOrb(false)
                 Control.CastSpell(HK_W, pull)
+                EnableOrb(true)
             elseif Anivia.C.W:Value() == 2 or PercentHP(myHero) < Anivia.C.NoPull:Value() then
                 local push = Vector(myHero.pos) + Vector(Vector(target.pos) - Vector(myHero.pos)):Normalized() * (myHero.pos:DistanceTo(target.pos) - 100)
+                EnableOrb(false)
                 Control.CastSpell(HK_W, push)
+                EnableOrb(true)
             end
         end
     end
-    if Ready(_E) and ValidTarget(target, E.Range) then
-        if Anivia.C.Em:Value() > PercentMP(myHero) then return end
-        if Anivia.C.E:Value() ~= 3 then
-            if Anivia.C.E:Value() == 2 then
-                Control.CastSpell(HK_E, target)
-            elseif Anivia.C.E:Value() == 1 then
-                for i = 0, target.buffCount do
-                local buff = target:GetBuff(i);
-                    if buff.count > 0 then
-                        if buff.name == "aniviaiced" then
-                            Control.CastSpell(HK_E, target)
-                        end
+    if Ready(_Q) and ValidTarget(target, Q.Range) then
+        if Anivia.C.Qm:Value() > PercentMP(myHero) then return end
+        if Anivia.C.Q:Value() and myHero:GetSpellData(_Q).toggleState == 1 then
+            local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
+            EnableOrb(false)
+            CustomCast(HK_Q, pos, 250)
+            EnableOrb(true)
+        elseif myHero:GetSpellData(_Q).toggleState == 2 then
+            for i = 0, Game.ParticleCount() do
+            	local particle = Game.Particle(i)
+                if particle.name == "Anivia_Base_Q_AOE_Mis.troy" then
+                    if target and target.pos:DistanceTo(particle.pos) < 225 then
+                            Control.CastSpell(HK_Q)
                     end
                 end
             end
         end
     end
-    if Ready(_R) and ValidTarget(target, R.Range) then
-        if Anivia.C.Rm:Value() > PercentMP(myHero) then return end
-        if Anivia.C.R:Value() then
-            if myHero:GetSpellData(_R).toggleState == 1 then
-                local pos = GetPred(target, Q.Speed, 0.25 + (Game.Latency()/1000))
-                CustomCast(HK_R, pos, 250)
-            elseif Ready(_R) and myHero:GetSpellData(_R).toggleState ~=1 and PercentMP(myHero) < Anivia.C.Rm:Value() then
-                Control.CastSpell(HK_R)
-            end
-        end
-    end
+
 end
 
 function Lane()
@@ -676,7 +706,7 @@ function StunQ()
     for i = 0, Game.ParticleCount() do
         local particle = Game.Particle(i)
         if particle.name == "Anivia_Base_Q_AOE_Mis.troy" then
-            if target and target.pos:DistanceTo(particle.pos) < Q.Radius then
+            if target and target.pos:DistanceTo(particle.pos) < 225 then
             	Control.CastSpell(HK_Q)
 			end
         end
@@ -711,7 +741,7 @@ function Summoners()
 		if myHero:GetSpellData(SUMMONER_1).name == "SummonerDot"
 		or myHero:GetSpellData(SUMMONER_2).name == "SummonerDot" then
 			if Anivia.A.S.Ignite:Value() then
-				local IgDamage = Qdmg(target) + Wdmg(target) + Edmg(target) + Rdmg(target) + Idmg(target)
+				local IgDamage = Qdmg(target) + Edmg(target) + Idmg(target)
 				if myHero:GetSpellData(SUMMONER_1).name == "SummonerDot" and Ready(SUMMONER_1) and IgDamage > target.health
 				and myHero.pos:DistanceTo(target.pos) < 600 then
 					Control.CastSpell(HK_SUMMONER_1, target)
@@ -835,6 +865,23 @@ function Drawings()
     				Draw.Rect(barPos.x, barPos.y, (health / maxHealth ) * 100, 10, Draw.Color(170, 000, 255, 000))
 				end
 			end
+		end
+	end
+--toggle
+	if Anivia.D.Emode:Value() then
+		local textPos = myHero.pos:To2D()
+		if Anivia.C.E:Value() then
+			Draw.Text("Mode: Enchanced", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
+		else
+			Draw.Text("Mode: Normal", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
+		end
+	end
+	if Anivia.D.Wa:Value() then
+		local textPos = myHero.pos:To2D()
+		if Anivia.C.Wa:Value() then
+			Draw.Text("Toggle: Wall ON", 20, textPos.x - 33, textPos.y + 40, Draw.Color(255, 000, 255, 000))
+		else
+			Draw.Text("Toggle: Wall OFF", 20, textPos.x - 33, textPos.y + 40, Draw.Color(255, 225, 000, 000))
 		end
 	end
 end

@@ -871,9 +871,9 @@ function Drawings()
 	if Anivia.D.Emode:Value() then
 		local textPos = myHero.pos:To2D()
 		if Anivia.C.E:Value() then
-			Draw.Text("Mode: Enchanced", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
+			Draw.Text("E Mode: ENHANCED", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
 		else
-			Draw.Text("Mode: Normal", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
+			Draw.Text("E Mode: NORMAL", 20, textPos.x - 33, textPos.y + 60, Draw.Color(255, 000, 255, 000))
 		end
 	end
 	if Anivia.D.Wa:Value() then

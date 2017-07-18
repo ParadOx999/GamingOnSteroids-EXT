@@ -217,8 +217,8 @@ Anivia:MenuElement({type = MENU, id = "KS", name = "Killsteal Menu"})
 Anivia:MenuElement({type = MENU, id = "A", name = "Activator Menu"})
 Anivia:MenuElement({type = MENU, id = "D", name = "Drawings Menu"})
 Anivia:MenuElement({id = "Author", name = "Author", drop = {"parad0x"}})
-Anivia:MenuElement({id = "Version", name = "Version", drop = {"v1.2"}})
-Anivia:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.13"}})
+Anivia:MenuElement({id = "Version", name = "Version", drop = {"v1.3"}})
+Anivia:MenuElement({id = "Patch", name = "Patch", drop = {"RIOT 7.14"}})
 
 Anivia.C:MenuElement({name = "Flash Frost", drop = {"Q"}, leftIcon = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/spell/FlashFrost.png"})
 Anivia.C:MenuElement({id = "Q", name = "Enable", value = true})
@@ -472,7 +472,8 @@ end
 
 function Combo()
     local target = GetTarget(1200)
-    if target == nil then return end
+	if target == nil or target == myHero.team then return end
+	if target ~= myHero.team then
     if Ready(_R) and myHero.pos:DistanceTo(target.pos) < 650 then
         if Anivia.C.Rm:Value() > PercentMP(myHero) then return end
         if Anivia.C.R:Value() then
@@ -542,13 +543,13 @@ function Combo()
             end
         end
     end
-
+	end
 end
 
 function Lane()
     for i = 1, Game.MinionCount() do
         local minion = Game.Minion(i)
-        if minion and minion.team == 200 then
+        if minion and minion.team ~= myHero.team then
             if Ready(_E) and ValidTarget(minion, E.Range) then
                 if Anivia.LC.Em:Value() > PercentMP(myHero) then return end
                 if Anivia.LC.E:Value() then
@@ -559,7 +560,7 @@ function Lane()
     end
     for i = 1, Game.MinionCount() do
         local minion = Game.Minion(i)
-        if minion and minion.team == 200 then  
+        if minion and minion.team ~= myHero.team then  
             if Ready(_R) and ValidTarget(minion, R.Range) then
                 if Anivia.LC.Rm:Value() > PercentMP(myHero) then return end
                 if Anivia.LC.R:Value() then
@@ -605,7 +606,7 @@ end
 
 function Harass()
     local target = GetTarget(Q.Range)
-    if target == nil then return end
+    if target == nil or target == myHero.team then return end
     if Ready(_Q) and ValidTarget(target, Q.Range) then
         if Anivia.H.Qm:Value() > PercentMP(myHero) then return end
         if Anivia.H.Q:Value() and myHero:GetSpellData(_Q).toggleState == 1 then
@@ -671,7 +672,7 @@ end
 
 function Killsteal()
     local target = GetTarget(E.Range)
-    if target == nil then return end
+	if target == nil or target == myHero.team then return end
     if Ready(_Q) and ValidTarget(target, Q.Range) then
         if Anivia.F.Qm:Value() > PercentMP(myHero) then return end
         if Anivia.KS.Q:Value() and Qdmg(target) > target.health then
@@ -701,7 +702,7 @@ end
 
 function StunQ()
     local target = GetTarget(2500)
-    if target == nil then return end
+    if target == nil or target == myHero.team then return end
 	if Anivia.S.Q:Value() == false then return end
     for i = 0, Game.ParticleCount() do
         local particle = Game.Particle(i)
@@ -715,7 +716,7 @@ end
 
 function Summoners()
 	local target = GetTarget(1500)
-    if target == nil then return end
+    if target == nil or target == myHero.team then return end
 	if GetMode() == "Combo" then
 		if myHero:GetSpellData(SUMMONER_1).name == "SummonerSmite" or myHero:GetSpellData(SUMMONER_1).name == "S5_SummonerSmitePlayerGanker" or myHero:GetSpellData(SUMMONER_1).name == "S5_SummonerSmiteDuel"
 		or myHero:GetSpellData(SUMMONER_2).name == "SummonerSmite" or myHero:GetSpellData(SUMMONER_2).name == "S5_SummonerSmitePlayerGanker" or myHero:GetSpellData(SUMMONER_1).name == "S5_SummonerSmiteDuel" then
